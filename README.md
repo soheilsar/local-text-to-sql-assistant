@@ -84,6 +84,10 @@ python run_all.py      # development and held-out sets, with 0 and 2 retries
 | `check_ollama.py` | Confirms Ollama is running and the configured model answers |
 | `check_read_only.py` | Proves writes are blocked, using a temporary copy of the database |
 | `requirements.txt`, `.gitignore` | Dependencies; files kept out of git (`company.db` is rebuilt) |
+| `prompts.py` | The three frozen prompt conditions (A, B, C) |
+| `compare_prompts.py` | Runs the three conditions for one model and writes `results/` |
+| `scoring.py` | Result comparison used by the experiment (scorer v2) |
+| `rescore.py` | Re-scores saved results without calling any model |
 
 ## Database
 
@@ -157,11 +161,50 @@ All results are for `qwen3:1.7b`, thinking off, temperature 0, on the seeded dat
 |---|---|---|
 | No retries | 12/15 | 7/10 |
 | Up to 2 retries (repair loop) | 12/15 | 7/10 |
-| `qwen3:4b` | pending | pending |
 
 Development breakdown: 11 of 12 regular questions pass; 1 of 3 adversarial questions passes.
 
 Earlier scores (14/15 development, 7/10 held-out) were measured while the schema description was not reaching the model (the f-string bug above). They are not comparable. Delivering the schema changed no regular result; two adversarial tests that had passed by accident now fail.
+
+## Prompt conditions experiment
+
+Three local models, three prompt conditions, the same database and the same 25
+questions (15 development + 10 held-out), temperature 0, seed 42, no few-shot
+examples. Prompts are in `prompts.py`; the SQL every model wrote for every
+question is in `results/*__report.md`.
+
+- **A:** the database described in one sentence (no schema, no rules)
+- **B:** A + schema (views, columns, types, allowed values)
+- **C:** B + rules
+
+Scores count the 22 questions that have a correct answer. The 3 adversarial
+questions are excluded: no prompt lets the model refuse, so any pass there is
+accidental.
+
+| Model | A | B: + schema | C: + schema + rules | Seconds per question (B) |
+|---|---|---|---|---|
+| qwen3:1.7b | 4/22 | 15/22 | 14/22 | 2.7 |
+| bird-cot | 5/22 | 22/22 | 20/22 | 6.2 |
+| distil-qwen3-4b-text2sql | 7/22 | 20/22 | 21/22 | 3.7 |
+
+Findings:
+
+- Describing the schema is the dominant factor: +11, +17 and +13 questions.
+- The rules gave no consistent gain (-1, -2, +1).
+- Both 4B-class models beat qwen3:1.7b under B. bird-cot and distil differ by
+  1 to 2 questions, which this test cannot separate; bird-cot is about 1.7x slower.
+
+Scoring: the model's result rows are compared with the gold result, ignoring
+column order, extra columns and row order (`scoring.py`). An earlier positional
+comparison marked correct answers as failures, so all results were re-scored with
+`rescore.py` (no model was run again). `evaluate.py` still uses the earlier
+comparison, so the 12/15 and 7/10 scores above are not comparable with this table.
+
+Limitations: one run per configuration; 22 questions, so one question is about
+4.5 percentage points; the rules were written from qwen3:1.7b's development
+failures and the held-out questions have been seen, so condition C favors that
+model; the data is synthetic and small; no model refuses questions the data
+cannot answer.
 
 ### Current failures
 
