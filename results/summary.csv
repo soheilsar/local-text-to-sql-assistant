@@ -1,0 +1,4 @@
+timestamp,model,condition,dev,heldout,regular,adversarial,total,avg_seconds
+2026-11-19T12:57:38,qwen3:1.7b,A_baseline,4/15,3/10,4/22,3/3,7/25,2.64
+2026-11-19T12:58:45,qwen3:1.7b,B_schema,10/15,6/10,14/22,2/3,16/25,2.66
+2026-11-19T12:59:51,qwen3:1.7b,C_schema_rules,9/15,6/10,13/22,2/3,15/25,2.64
