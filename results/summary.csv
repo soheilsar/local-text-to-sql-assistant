@@ -2,3 +2,6 @@ timestamp,model,condition,dev,heldout,regular,adversarial,total,avg_seconds
 2026-11-19T12:57:38,qwen3:1.7b,A_baseline,4/15,3/10,4/22,3/3,7/25,2.64
 2026-11-19T12:58:45,qwen3:1.7b,B_schema,10/15,6/10,14/22,2/3,16/25,2.66
 2026-11-19T12:59:51,qwen3:1.7b,C_schema_rules,9/15,6/10,13/22,2/3,15/25,2.64
+2026-11-19T13:23:55,bird-cot:latest,A_baseline,6/15,2/10,5/22,3/3,8/25,6.13
+2026-11-19T13:26:30,bird-cot:latest,B_schema,13/15,10/10,21/22,2/3,23/25,6.21
+2026-11-19T13:28:58,bird-cot:latest,C_schema_rules,12/15,8/10,18/22,2/3,20/25,5.92
