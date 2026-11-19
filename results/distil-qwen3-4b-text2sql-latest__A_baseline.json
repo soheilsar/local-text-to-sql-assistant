@@ -279,5 +279,6 @@
       "note": "",
       "seconds": 5.47
     }
-  ]
+  ],
+  "scorer": "v2: column order, extra columns and row order ignored"
 }

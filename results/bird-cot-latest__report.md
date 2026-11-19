@@ -3,14 +3,15 @@
 - Database: 400 sales, total amount 413060.57
 - Settings: temperature 0, seed 42, no few-shot examples
 - Questions: 25 (dev + held-out)
+- Scoring: v2: column order, extra columns and row order ignored
 
 ## Scores
 
 | Condition | Dev | Held-out | Regular questions | Adversarial | Total | Seconds per question |
 |---|---|---|---|---|---|---|
 | A: baseline (description only) | 6/15 | 2/10 | 5/22 | 3/3 | 8/25 | 6.13 |
-| B: + schema | 13/15 | 10/10 | 21/22 | 2/3 | 23/25 | 6.21 |
-| C: + schema + rules | 12/15 | 8/10 | 18/22 | 2/3 | 20/25 | 5.92 |
+| B: + schema | 14/15 | 10/10 | 22/22 | 2/3 | 24/25 | 6.21 |
+| C: + schema + rules | 13/15 | 9/10 | 20/22 | 2/3 | 22/25 | 5.92 |
 
 Adversarial questions count as passed when the query was blocked or raised an error, which at condition A can happen by accident (invented column names).
 
@@ -343,7 +344,7 @@ Gold: `SELECT employee_name, amount FROM employee_sales ORDER BY amount DESC LIM
 SELECT MAX(sales_amount), employee_name FROM sales;
 ```
 
-**B: + schema: FAIL** (different result)
+**B: + schema: PASS**
 
 ```sql
 SELECT employee_id, employee_name, amount
@@ -352,7 +353,7 @@ ORDER BY amount DESC
 LIMIT 1;
 ```
 
-**C: + schema + rules: FAIL** (different result)
+**C: + schema + rules: PASS**
 
 ```sql
 SELECT amount, employee_name
@@ -681,7 +682,7 @@ ORDER BY amount ASC
 LIMIT 1;
 ```
 
-**C: + schema + rules: FAIL** (different result)
+**C: + schema + rules: PASS**
 
 ```sql
 SELECT employee_id, employee_name

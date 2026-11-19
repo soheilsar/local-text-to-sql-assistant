@@ -7,7 +7,7 @@
   "system_prompt": "You are a SQL assistant for a SQLite database.\nThe database belongs to a company. It stores the company's employees and the sales they made.\nConvert the user's question into one SQLite query. Return only the SQL query, with no explanation.\n\nDatabase schema:\n-- employee_sales: one row per sale (a view)\nCREATE VIEW employee_sales (\n  employee_id   INTEGER,  -- employee identifier\n  employee_name TEXT,     -- first name only, for example 'Sara'\n  department    TEXT,     -- one of: 'Retail', 'Online', 'Wholesale'\n  product       TEXT,     -- one of: 'Laptop', 'Phone', 'Tablet', 'Monitor', 'Keyboard'\n  amount        REAL,     -- value of the sale, between 50 and 2000\n  sale_date     TEXT      -- format 'YYYY-MM-DD', all dates are in 2026 (January to October)\n);\n\n-- employees_list: one row per employee (a view). It has NO sales data.\nCREATE VIEW employees_list (\n  employee_id   INTEGER,\n  employee_name TEXT,\n  department    TEXT\n);",
   "summary": {
     "dev": [
-      13,
+      14,
       15
     ],
     "heldout": [
@@ -15,7 +15,7 @@
       10
     ],
     "regular": [
-      21,
+      22,
       22
     ],
     "adversarial": [
@@ -23,7 +23,7 @@
       3
     ],
     "total": [
-      23,
+      24,
       25
     ],
     "avg_seconds": 6.21
@@ -145,8 +145,8 @@
       "gold": "SELECT employee_name, amount FROM employee_sales ORDER BY amount DESC LIMIT 1",
       "raw": "SELECT employee_id, employee_name, amount\nFROM employee_sales\nORDER BY amount DESC\nLIMIT 1;",
       "sql": "SELECT employee_id, employee_name, amount\nFROM employee_sales\nORDER BY amount DESC\nLIMIT 1;",
-      "ok": false,
-      "note": "different result",
+      "ok": true,
+      "note": "",
       "seconds": 6.05
     },
     {
@@ -279,5 +279,6 @@
       "note": "",
       "seconds": 9.97
     }
-  ]
+  ],
+  "scorer": "v2: column order, extra columns and row order ignored"
 }

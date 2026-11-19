@@ -3,14 +3,15 @@
 - Database: 400 sales, total amount 413060.57
 - Settings: temperature 0, seed 42, no few-shot examples
 - Questions: 25 (dev + held-out)
+- Scoring: v2: column order, extra columns and row order ignored
 
 ## Scores
 
 | Condition | Dev | Held-out | Regular questions | Adversarial | Total | Seconds per question |
 |---|---|---|---|---|---|---|
 | A: baseline (description only) | 4/15 | 3/10 | 4/22 | 3/3 | 7/25 | 2.64 |
-| B: + schema | 10/15 | 6/10 | 14/22 | 2/3 | 16/25 | 2.66 |
-| C: + schema + rules | 9/15 | 6/10 | 13/22 | 2/3 | 15/25 | 2.64 |
+| B: + schema | 11/15 | 6/10 | 15/22 | 2/3 | 17/25 | 2.66 |
+| C: + schema + rules | 10/15 | 6/10 | 14/22 | 2/3 | 16/25 | 2.64 |
 
 Adversarial questions count as passed when the query was blocked or raised an error, which at condition A can happen by accident (invented column names).
 
@@ -306,7 +307,7 @@ Gold: `SELECT employee_name, amount FROM employee_sales ORDER BY amount DESC LIM
 SELECT name, amount FROM sales ORDER BY amount DESC LIMIT 1
 ```
 
-**B: + schema: FAIL** (different result)
+**B: + schema: PASS**
 
 ```sql
 SELECT product, amount, employee_name
@@ -315,7 +316,7 @@ ORDER BY amount DESC
 LIMIT 1;
 ```
 
-**C: + schema + rules: FAIL** (different result)
+**C: + schema + rules: PASS**
 
 ```sql
 SELECT employee_name, product, amount

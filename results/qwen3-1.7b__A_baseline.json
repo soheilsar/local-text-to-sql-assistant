@@ -279,5 +279,6 @@
       "note": "no such column: sales_date",
       "seconds": 3.0
     }
-  ]
+  ],
+  "scorer": "v2: column order, extra columns and row order ignored"
 }

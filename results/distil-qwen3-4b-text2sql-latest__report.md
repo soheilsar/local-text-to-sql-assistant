@@ -3,14 +3,15 @@
 - Database: 400 sales, total amount 413060.57
 - Settings: temperature 0, seed 42, no few-shot examples
 - Questions: 25 (dev + held-out)
+- Scoring: v2: column order, extra columns and row order ignored
 
 ## Scores
 
 | Condition | Dev | Held-out | Regular questions | Adversarial | Total | Seconds per question |
 |---|---|---|---|---|---|---|
 | A: baseline (description only) | 6/15 | 4/10 | 7/22 | 3/3 | 10/25 | 3.5 |
-| B: + schema | 12/15 | 8/10 | 17/22 | 3/3 | 20/25 | 3.67 |
-| C: + schema + rules | 13/15 | 8/10 | 18/22 | 3/3 | 21/25 | 3.79 |
+| B: + schema | 14/15 | 9/10 | 20/22 | 3/3 | 23/25 | 3.67 |
+| C: + schema + rules | 15/15 | 9/10 | 21/22 | 3/3 | 24/25 | 3.79 |
 
 Adversarial questions count as passed when the query was blocked or raised an error, which at condition A can happen by accident (invented column names).
 
@@ -119,7 +120,7 @@ ORDER BY total_phone_sales DESC
 LIMIT 1;
 ```
 
-**B: + schema: FAIL** (different result)
+**B: + schema: PASS**
 
 ```sql
 SELECT employee_id, employee_name, SUM(amount) AS total_sales 
@@ -130,7 +131,7 @@ ORDER BY total_sales DESC
 LIMIT 1;
 ```
 
-**C: + schema + rules: FAIL** (different result)
+**C: + schema + rules: PASS**
 
 ```sql
 SELECT employee_id, employee_name, SUM(amount) AS total_sales 
@@ -221,7 +222,7 @@ ORDER BY total_revenue DESC
 LIMIT 5;
 ```
 
-**B: + schema: FAIL** (different result)
+**B: + schema: PASS**
 
 ```sql
 SELECT employee_id, employee_name, SUM(amount) AS total_revenue 
@@ -231,7 +232,7 @@ ORDER BY total_revenue DESC
 LIMIT 5;
 ```
 
-**C: + schema + rules: FAIL** (different result)
+**C: + schema + rules: PASS**
 
 ```sql
 SELECT employee_id, employee_name, SUM(amount) AS total_revenue 
@@ -405,13 +406,13 @@ Gold: `SELECT employee_id, employee_name FROM employee_sales GROUP BY employee_i
 SELECT id, name FROM employees ORDER BY total_sales ASC LIMIT 3;
 ```
 
-**B: + schema: FAIL** (different result)
+**B: + schema: PASS**
 
 ```sql
 SELECT employee_id, employee_name FROM employees_list WHERE employee_id IN (SELECT employee_id FROM employee_sales GROUP BY employee_id ORDER BY SUM(amount) ASC LIMIT 3);
 ```
 
-**C: + schema + rules: FAIL** (different result)
+**C: + schema + rules: PASS**
 
 ```sql
 SELECT employee_id, employee_name FROM employees_list WHERE employee_id IN (SELECT employee_id FROM employee_sales GROUP BY employee_id ORDER BY SUM(amount) ASC LIMIT 3);

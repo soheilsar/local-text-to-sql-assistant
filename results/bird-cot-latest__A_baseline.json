@@ -279,5 +279,6 @@
       "note": "no such table: sales_table",
       "seconds": 13.44
     }
-  ]
+  ],
+  "scorer": "v2: column order, extra columns and row order ignored"
 }
