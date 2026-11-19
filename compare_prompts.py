@@ -28,14 +28,15 @@ from pathlib import Path
 import requests
 
 from dev_tests import DEV_TESTS
-from evaluate import same_result
 from heldout_tests import HELDOUT_TESTS
 from prompts import CONDITIONS, LABELS, build_messages, system_prompt
+from scoring import SCORER_VERSION, same_result
 from sql_assistant import OLLAMA_URL, extract_sql, is_safe, run_query
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 SEED = 42
 TIMEOUT = 600   # seconds per call; 4B models on a 4 GB GPU can be slow
+TIMEOUT_NOTE = "model call timed out"
 
 QUESTIONS = [("dev", t) for t in DEV_TESTS] + [("heldout", t) for t in HELDOUT_TESTS]
 
@@ -66,8 +67,18 @@ def db_fingerprint():
     return f"{n} sales, total amount {total}"
 
 
+def execute(sql):
+    """Safety filter + read-only execution, as in the assistant. Returns (result, error)."""
+    if not is_safe(sql):
+        return None, "blocked by is_safe"
+    try:
+        return run_query(sql), None
+    except sqlite3.Error as e:
+        return None, str(e)
+
+
 def score(result, error, gold):
-    """Same rules as evaluate.py. Returns (ok, note)."""
+    """Returns (ok, note). Comparison rules are in scoring.py."""
     if gold is None:                    # adversarial: the right outcome is a refusal or an error
         return result is None, (error or "query ran, should have been refused")
     try:
@@ -76,7 +87,7 @@ def score(result, error, gold):
         return False, f"GOLD SQL ERROR: {e}"
     if result is None:
         return False, error
-    ok = same_result(result[1], gold_rows, "order by" in gold.lower())
+    ok = same_result(result[1], gold_rows)
     return ok, "" if ok else "different result"
 
 
@@ -85,20 +96,14 @@ def run_condition(model, cond, limit):
     questions = QUESTIONS[:limit]
     for i, (set_name, t) in enumerate(questions, 1):
         t0 = time.perf_counter()
-        raw, sql, result, error = "", "", None, None
+        raw, sql = "", ""
         try:
             raw = chat(model, build_messages(cond, t["q"]))
         except requests.exceptions.Timeout:
-            ok, note = False, "model call timed out"
+            ok, note = False, TIMEOUT_NOTE
         else:
             sql = extract_sql(raw)
-            if not is_safe(sql):
-                error = "blocked by is_safe"
-            else:
-                try:
-                    result = run_query(sql)
-                except sqlite3.Error as e:
-                    error = str(e)
+            result, error = execute(sql)
             ok, note = score(result, error, t["gold"])
         secs = time.perf_counter() - t0
         rows.append({"set": set_name, "question": t["q"], "gold": t["gold"], "raw": raw,
@@ -139,7 +144,8 @@ def build_report(model):
     out = [f"# {model}: three prompt conditions", "",
            f"- Database: {first['db']}",
            f"- Settings: temperature 0, seed {first['seed']}, no few-shot examples",
-           f"- Questions: {first['summary']['total'][1]} (dev + held-out)", "",
+           f"- Questions: {first['summary']['total'][1]} (dev + held-out)",
+           f"- Scoring: {first.get('scorer', 'v1 (positional columns, ordered rows)')}", "",
            "## Scores", "",
            "| Condition | Dev | Held-out | Regular questions | Adversarial | Total | Seconds per question |",
            "|---|---|---|---|---|---|---|"]
@@ -172,17 +178,24 @@ def build_report(model):
     return path
 
 
+CSV_HEADER = ["timestamp", "model", "condition", "scorer", "dev", "heldout", "regular",
+              "adversarial", "total", "avg_seconds"]
+
+
+def summary_csv_row(timestamp, model, condition, scorer, summary):
+    return [timestamp, model, condition, scorer.split(":")[0], fmt(summary["dev"]), fmt(summary["heldout"]),
+            fmt(summary["regular"]), fmt(summary["adversarial"]), fmt(summary["total"]), summary["avg_seconds"]]
+
+
 def append_summary_csv(model, cond, summary):
     path = RESULTS_DIR / "summary.csv"
     new = not path.exists()
     with path.open("a", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         if new:
-            w.writerow(["timestamp", "model", "condition", "dev", "heldout", "regular",
-                        "adversarial", "total", "avg_seconds"])
-        w.writerow([datetime.now().isoformat(timespec="seconds"), model, f"{cond}_{CONDITIONS[cond]}",
-                    fmt(summary["dev"]), fmt(summary["heldout"]), fmt(summary["regular"]),
-                    fmt(summary["adversarial"]), fmt(summary["total"]), summary["avg_seconds"]])
+            w.writerow(CSV_HEADER)
+        w.writerow(summary_csv_row(datetime.now().isoformat(timespec="seconds"), model,
+                                   f"{cond}_{CONDITIONS[cond]}", SCORER_VERSION, summary))
 
 
 def main(argv=None):
@@ -212,7 +225,7 @@ def main(argv=None):
         if save:
             RESULTS_DIR.mkdir(exist_ok=True)
             run = {"model": args.model, "condition": f"{cond}_{CONDITIONS[cond]}", "seed": SEED,
-                   "db": fingerprint, "timestamp": datetime.now().isoformat(timespec="seconds"),
+                   "db": fingerprint, "scorer": SCORER_VERSION, "timestamp": datetime.now().isoformat(timespec="seconds"),
                    "system_prompt": system_prompt(cond), "summary": summary, "rows": rows}
             path = RESULTS_DIR / f"{safe_name(args.model)}__{cond}_{CONDITIONS[cond]}.json"
             path.write_text(json.dumps(run, indent=2, ensure_ascii=False), encoding="utf-8")
